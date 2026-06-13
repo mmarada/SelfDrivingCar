@@ -3,19 +3,17 @@ carCanvas.width=200;
 const networkCanvas=document.getElementById("networkCanvas");
 networkCanvas.width=300;
 
-
 const carCtx=carCanvas.getContext("2d");
 const networkCtx=networkCanvas.getContext("2d");
 const road=new Road(carCanvas.width/2,carCanvas.width*0.9);
-const N=1;
+const N=100;
 const cars=generateCars(N);
 let bestCar=cars[0];
 if(localStorage.getItem("bestBrain")){
     for(let i=0;i<cars.length;i++){
-        
-    cars[i].brain=JSON.parse(
-        localStorage.getItem("bestBrain")
-    );
+        cars[i].brain=JSON.parse(
+            localStorage.getItem("bestBrain")
+        );
         if(i!=0){
             NeuralNetwork.mutate(cars[i].brain,0.1);
         }
@@ -30,18 +28,18 @@ const traffic=[
     new Car(road.getLaneCenter(1),-500,30,50,"Dummy",2),
     new Car(road.getLaneCenter(2),-700,30,50,"Dummy",2),
     new Car(road.getLaneCenter(0),-700,30,50,"Dummy",2),
-    
     new Car(road.getLaneCenter(1),-900,30,50,"Dummy",2),
     new Car(road.getLaneCenter(2),-900,30,50,"Dummy",2),
-    
     new Car(road.getLaneCenter(2),-1100,30,50,"Dummy",2),
     new Car(road.getLaneCenter(1),-1100,30,50,"Dummy",2),
-    
     new Car(road.getLaneCenter(2),-1300,30,50,"Dummy",2),
     new Car(road.getLaneCenter(0),-1300,30,50,"Dummy",2),
 ];
 
-    animate();
+const genStats=new GenerationStats();
+let generationEnded=false;
+
+animate();
 
 function save(){
     localStorage.setItem("bestBrain",
@@ -52,15 +50,72 @@ function discard(){
     localStorage.removeItem("bestBrain");
 }
 
-function generateCars(N){
+function clearStats(){
+    genStats.clearHistory();
+}
 
+function downloadBrain(){
+    const data=JSON.stringify(bestCar.brain,null,2);
+    const blob=new Blob([data],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download="best-brain-gen"+genStats.generation+".json";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function loadBrainFromFile(event){
+    const file=event.target.files[0];
+    if(!file) return;
+    const reader=new FileReader();
+    reader.onload=function(e){
+        try{
+            const brain=JSON.parse(e.target.result);
+            localStorage.setItem("bestBrain",JSON.stringify(brain));
+            location.reload();
+        }catch(err){
+            alert("Invalid brain file: "+err.message);
+        }
+    };
+    reader.readAsText(file);
+    event.target.value="";
+}
+
+function generateCars(N){
     const cars=[];
     for(let i=0;i<N;i++){
         cars.push(new Car(road.getLaneCenter(1),100,30,50,"AI"));
-
     }
-
     return cars;
+}
+
+function drawHUD(time){
+    const alive=cars.filter(c=>!c.damaged).length;
+    const dist=Math.max(0,Math.round(100-bestCar.y));
+    const gen=genStats.generation+(generationEnded?0:1);
+
+    carCtx.save();
+    carCtx.fillStyle="rgba(0,0,0,0.55)";
+    carCtx.fillRect(5,5,190,68);
+
+    carCtx.font="bold 12px monospace";
+    carCtx.fillStyle="#00e676";
+    carCtx.fillText("Gen "+gen,12,22);
+
+    carCtx.font="12px monospace";
+    carCtx.fillStyle="#fff";
+    carCtx.fillText("Alive: "+alive+" / "+N,12,40);
+    carCtx.fillText("Dist:  "+dist+"px",12,58);
+
+    if(generationEnded){
+        carCtx.fillStyle="rgba(0,230,118,0.15)";
+        carCtx.fillRect(5,5,190,68);
+        carCtx.fillStyle="#00e676";
+        carCtx.font="bold 11px monospace";
+        carCtx.fillText("All crashed — save & reload",12,75);
+    }
+    carCtx.restore();
 }
 
 function animate(time){
@@ -76,8 +131,17 @@ function animate(time){
             ...cars.map(c=>c.y)
         ));
 
+    const dist=Math.max(0,100-bestCar.y);
+    genStats.trackDistance(dist);
+
+    if(!generationEnded && cars.every(c=>c.damaged)){
+        generationEnded=true;
+        genStats.recordGeneration();
+    }
+
     carCanvas.height=window.innerHeight;
     networkCanvas.height=window.innerHeight;
+
     carCtx.save();
     carCtx.translate(0,-bestCar.y+carCanvas.height*0.7);
     road.draw(carCtx);
@@ -89,10 +153,14 @@ function animate(time){
         cars[i].draw(carCtx,"blue");
     }
     carCtx.globalAlpha=1;
-
     bestCar.draw(carCtx,"blue",true);
     carCtx.restore();
+
+    drawHUD(time);
+
     networkCtx.lineDashOffset=-time/50;
     Visualizer.drawNetwork(networkCtx,bestCar.brain);
+    genStats.draw(networkCtx);
+
     requestAnimationFrame(animate);
 }

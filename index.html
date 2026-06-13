@@ -9,6 +9,10 @@
         <div id="verticalButtons">
             <button onclick="save()">Save</button>
             <button onclick="discard()">Delete</button>
+            <button onclick="clearStats()" title="Clear generation history">Clear Stats</button>
+            <button onclick="downloadBrain()" title="Download brain weights as JSON">Export</button>
+            <button onclick="document.getElementById('brainUpload').click()" title="Load brain weights from JSON file">Import</button>
+            <input type="file" id="brainUpload" accept=".json" style="display:none" onchange="loadBrainFromFile(event)"/>
         </div>
         <canvas id="networkCanvas"></canvas>
         <script src="visualizer.js"></script>
@@ -18,8 +22,7 @@
         <script src="road.js"></script>
         <script src="controls.js"></script>
         <script src="car.js"></script>
+        <script src="stats.js"></script>
         <script src="main.js"></script>
-        
     </body>
-
 </html>
