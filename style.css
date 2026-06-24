@@ -31,3 +31,32 @@ button:hover{
 #networkCanvas{
     background: black;
 }
+
+#mutationControl{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(0,0,0,0.15);
+    border-radius: 5px;
+    padding: 4px 5px 6px;
+    margin: 2px;
+    font-size: 11px;
+    font-family: monospace;
+    color: #222;
+}
+
+#mutationControl label{
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+#mutationControl input[type="range"]{
+    width: 80px;
+    cursor: pointer;
+}
+
+#mutationValue{
+    margin-top: 2px;
+    font-weight: bold;
+    color: #003399;
+}

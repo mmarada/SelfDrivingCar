@@ -7,17 +7,36 @@ const carCtx=carCanvas.getContext("2d");
 const networkCtx=networkCanvas.getContext("2d");
 const road=new Road(carCanvas.width/2,carCanvas.width*0.9);
 const N=100;
-const cars=generateCars(N);
+let cars=generateCars(N);
 let bestCar=cars[0];
-if(localStorage.getItem("bestBrain")){
-    for(let i=0;i<cars.length;i++){
-        cars[i].brain=JSON.parse(
-            localStorage.getItem("bestBrain")
-        );
-        if(i!=0){
-            NeuralNetwork.mutate(cars[i].brain,0.1);
+applyBrain(cars);
+
+function getMutationRate(){
+    const el=document.getElementById("mutationRate");
+    return el ? parseFloat(el.value) : 0.1;
+}
+
+function applyBrain(carList){
+    if(localStorage.getItem("bestBrain")){
+        const rate=getMutationRate();
+        for(let i=0;i<carList.length;i++){
+            carList[i].brain=JSON.parse(
+                localStorage.getItem("bestBrain")
+            );
+            if(i!=0){
+                NeuralNetwork.mutate(carList[i].brain,rate);
+            }
         }
     }
+}
+
+function restartSim(){
+    cars=generateCars(N);
+    applyBrain(cars);
+    bestCar=cars[0];
+    generationEnded=false;
+    genStats._recorded=false;
+    genStats.sessionBest=0;
 }
 
 const traffic=[
@@ -97,7 +116,7 @@ function drawHUD(time){
 
     carCtx.save();
     carCtx.fillStyle="rgba(0,0,0,0.55)";
-    carCtx.fillRect(5,5,190,68);
+    carCtx.fillRect(5,5,190,80);
 
     carCtx.font="bold 12px monospace";
     carCtx.fillStyle="#00e676";
@@ -107,13 +126,15 @@ function drawHUD(time){
     carCtx.fillStyle="#fff";
     carCtx.fillText("Alive: "+alive+" / "+N,12,40);
     carCtx.fillText("Dist:  "+dist+"px",12,58);
+    carCtx.fillStyle="#aaa";
+    carCtx.fillText("Mut:   "+getMutationRate().toFixed(2),12,74);
 
     if(generationEnded){
         carCtx.fillStyle="rgba(0,230,118,0.15)";
-        carCtx.fillRect(5,5,190,68);
+        carCtx.fillRect(5,5,190,80);
         carCtx.fillStyle="#00e676";
         carCtx.font="bold 11px monospace";
-        carCtx.fillText("All crashed — save & reload",12,75);
+        carCtx.fillText("All crashed — save & restart",12,93);
     }
     carCtx.restore();
 }
