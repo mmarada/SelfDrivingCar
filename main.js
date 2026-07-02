@@ -6,14 +6,22 @@ networkCanvas.width=300;
 const carCtx=carCanvas.getContext("2d");
 const networkCtx=networkCanvas.getContext("2d");
 const road=new Road(carCanvas.width/2,carCanvas.width*0.9);
-const N=100;
-let cars=generateCars(N);
+let cars=generateCars(getPopulationSize());
 let bestCar=cars[0];
 applyBrain(cars);
 
 function getMutationRate(){
     const el=document.getElementById("mutationRate");
     return el ? parseFloat(el.value) : 0.1;
+}
+
+function getPopulationSize(){
+    const el=document.getElementById("populationSize");
+    return el ? parseInt(el.value) : 100;
+}
+
+function onPopulationChange(){
+    restartSim();
 }
 
 function applyBrain(carList){
@@ -31,7 +39,7 @@ function applyBrain(carList){
 }
 
 function restartSim(){
-    cars=generateCars(N);
+    cars=generateCars(getPopulationSize());
     applyBrain(cars);
     bestCar=cars[0];
     generationEnded=false;
@@ -124,7 +132,7 @@ function drawHUD(time){
 
     carCtx.font="12px monospace";
     carCtx.fillStyle="#fff";
-    carCtx.fillText("Alive: "+alive+" / "+N,12,40);
+    carCtx.fillText("Alive: "+alive+" / "+getPopulationSize(),12,40);
     carCtx.fillText("Dist:  "+dist+"px",12,58);
     carCtx.fillStyle="#aaa";
     carCtx.fillText("Mut:   "+getMutationRate().toFixed(2),12,74);

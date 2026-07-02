@@ -19,6 +19,12 @@
                     oninput="document.getElementById('mutationValue').textContent=parseFloat(this.value).toFixed(2)"/>
                 <span id="mutationValue">0.10</span>
             </div>
+            <div id="populationControl">
+                <label for="populationSize">Population</label>
+                <input type="range" id="populationSize" min="20" max="200" step="10" value="100"
+                    oninput="document.getElementById('popValue').textContent=this.value; onPopulationChange()"/>
+                <span id="popValue">100</span>
+            </div>
             <button onclick="restartSim()" title="Respawn cars with current mutation rate">Restart</button>
         </div>
         <canvas id="networkCanvas"></canvas>
