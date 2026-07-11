@@ -24,6 +24,26 @@ function onPopulationChange(){
     restartSim();
 }
 
+const EVOLUTION_PRESETS={
+    explore:{population:150,mutation:0.4},
+    balanced:{population:80,mutation:0.15},
+    exploit:{population:40,mutation:0.05},
+};
+
+function applyPreset(name){
+    const preset=EVOLUTION_PRESETS[name];
+    if(!preset) return;
+
+    const popEl=document.getElementById("populationSize");
+    const mutEl=document.getElementById("mutationRate");
+    popEl.value=preset.population;
+    mutEl.value=preset.mutation;
+    document.getElementById("popValue").textContent=preset.population;
+    document.getElementById("mutationValue").textContent=preset.mutation.toFixed(2);
+
+    restartSim();
+}
+
 function applyBrain(carList){
     if(localStorage.getItem("bestBrain")){
         const rate=getMutationRate();

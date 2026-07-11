@@ -25,6 +25,12 @@
                     oninput="document.getElementById('popValue').textContent=this.value; onPopulationChange()"/>
                 <span id="popValue">100</span>
             </div>
+            <div id="presetControl">
+                <label>Presets</label>
+                <button onclick="applyPreset('explore')" title="N=150, mutation=0.40 — wide search, more chaos">Explore</button>
+                <button onclick="applyPreset('balanced')" title="N=80, mutation=0.15 — default tradeoff">Balanced</button>
+                <button onclick="applyPreset('exploit')" title="N=40, mutation=0.05 — refine current brain">Exploit</button>
+            </div>
             <button onclick="restartSim()" title="Respawn cars with current mutation rate">Restart</button>
         </div>
         <canvas id="networkCanvas"></canvas>
