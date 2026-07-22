@@ -33,7 +33,10 @@ const EVOLUTION_PRESETS={
 function applyPreset(name){
     const preset=EVOLUTION_PRESETS[name];
     if(!preset) return;
+    applyPresetValues(preset);
+}
 
+function applyPresetValues(preset){
     const popEl=document.getElementById("populationSize");
     const mutEl=document.getElementById("mutationRate");
     popEl.value=preset.population;
@@ -43,6 +46,73 @@ function applyPreset(name){
 
     restartSim();
 }
+
+function getCustomPresets(){
+    const raw=localStorage.getItem("customPresets");
+    return raw ? JSON.parse(raw) : {};
+}
+
+function setCustomPresets(presets){
+    localStorage.setItem("customPresets",JSON.stringify(presets));
+}
+
+function saveCustomPreset(){
+    const name=prompt("Name this preset:");
+    if(!name) return;
+    const trimmed=name.trim();
+    if(!trimmed) return;
+
+    const presets=getCustomPresets();
+    presets[trimmed]={population:getPopulationSize(),mutation:getMutationRate()};
+    setCustomPresets(presets);
+    renderCustomPresets();
+}
+
+function applyCustomPreset(name){
+    const preset=getCustomPresets()[name];
+    if(!preset) return;
+    applyPresetValues(preset);
+}
+
+function deleteCustomPreset(name){
+    const presets=getCustomPresets();
+    delete presets[name];
+    setCustomPresets(presets);
+    renderCustomPresets();
+}
+
+function renderCustomPresets(){
+    const list=document.getElementById("customPresetList");
+    if(!list) return;
+    const presets=getCustomPresets();
+    list.innerHTML="";
+
+    for(const name in presets){
+        const preset=presets[name];
+        const row=document.createElement("div");
+        row.className="customPresetRow";
+
+        const applyBtn=document.createElement("button");
+        applyBtn.textContent=name;
+        applyBtn.title="N="+preset.population+", mutation="+preset.mutation.toFixed(2);
+        applyBtn.onclick=()=>applyCustomPreset(name);
+
+        const deleteBtn=document.createElement("button");
+        deleteBtn.textContent="×";
+        deleteBtn.className="deletePresetBtn";
+        deleteBtn.title="Delete preset";
+        deleteBtn.onclick=(e)=>{
+            e.stopPropagation();
+            deleteCustomPreset(name);
+        };
+
+        row.appendChild(applyBtn);
+        row.appendChild(deleteBtn);
+        list.appendChild(row);
+    }
+}
+
+renderCustomPresets();
 
 function applyBrain(carList){
     if(localStorage.getItem("bestBrain")){

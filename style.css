@@ -112,3 +112,36 @@ button:hover{
     width: 70px;
     font-size: 11px;
 }
+
+#customPresetList{
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+}
+
+.customPresetRow{
+    display: flex;
+    align-items: center;
+    margin: 2px 0;
+}
+
+.customPresetRow button:first-child{
+    flex: 1;
+    width: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.deletePresetBtn{
+    width: 18px !important;
+    padding: 5px 0 7px 0 !important;
+    margin-left: 2px !important;
+    color: #900;
+}
+
+.deletePresetBtn:hover{
+    background: #c00;
+    color: white;
+}
