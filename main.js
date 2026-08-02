@@ -135,6 +135,9 @@ function restartSim(){
     generationEnded=false;
     genStats._recorded=false;
     genStats.sessionBest=0;
+    currentRunFrames=[];
+    replaying=false;
+    replayIndex=0;
 }
 
 const traffic=[
@@ -155,6 +158,72 @@ const traffic=[
 
 const genStats=new GenerationStats();
 let generationEnded=false;
+
+let currentRunFrames=[];
+let lastRunFrames=null;
+let replaying=false;
+let replayIndex=0;
+
+function polygonAt(x,y,angle,width,height){
+    const points=[];
+    const rad=Math.hypot(width,height)/2;
+    const alpha=Math.atan2(width,height);
+    points.push({x:x-Math.sin(angle-alpha)*rad,y:y-Math.cos(angle-alpha)*rad});
+    points.push({x:x-Math.sin(angle+alpha)*rad,y:y-Math.cos(angle+alpha)*rad});
+    points.push({x:x-Math.sin(Math.PI+angle-alpha)*rad,y:y-Math.cos(Math.PI+angle-alpha)*rad});
+    points.push({x:x-Math.sin(Math.PI+angle+alpha)*rad,y:y-Math.cos(Math.PI+angle+alpha)*rad});
+    return points;
+}
+
+function startReplay(){
+    if(!lastRunFrames || lastRunFrames.length===0) return;
+    replaying=true;
+    replayIndex=0;
+    const replayBtn=document.getElementById("replayBtn");
+    if(replayBtn) replayBtn.disabled=true;
+}
+
+function drawReplayFrame(){
+    const frame=lastRunFrames[replayIndex];
+
+    carCanvas.height=window.innerHeight;
+    networkCanvas.height=window.innerHeight;
+
+    carCtx.save();
+    carCtx.translate(0,-frame.y+carCanvas.height*0.7);
+    road.draw(carCtx);
+    for(let i=0;i<traffic.length;i++){
+        traffic[i].draw(carCtx,"red");
+    }
+
+    const poly=polygonAt(frame.x,frame.y,frame.angle,30,50);
+    carCtx.fillStyle="#ffd600";
+    carCtx.beginPath();
+    carCtx.moveTo(poly[0].x,poly[0].y);
+    for(let i=1;i<poly.length;i++){
+        carCtx.lineTo(poly[i].x,poly[i].y);
+    }
+    carCtx.fill();
+    carCtx.restore();
+
+    carCtx.save();
+    carCtx.fillStyle="rgba(0,0,0,0.55)";
+    carCtx.fillRect(5,5,190,40);
+    carCtx.font="bold 12px monospace";
+    carCtx.fillStyle="#ffd600";
+    carCtx.fillText("Replay",12,22);
+    carCtx.font="12px monospace";
+    carCtx.fillStyle="#fff";
+    carCtx.fillText("Frame "+(replayIndex+1)+" / "+lastRunFrames.length,12,40);
+    carCtx.restore();
+
+    replayIndex++;
+    if(replayIndex>=lastRunFrames.length){
+        replaying=false;
+        const replayBtn=document.getElementById("replayBtn");
+        if(replayBtn) replayBtn.disabled=false;
+    }
+}
 
 animate();
 
@@ -238,6 +307,12 @@ function drawHUD(time){
 }
 
 function animate(time){
+    if(replaying){
+        drawReplayFrame();
+        requestAnimationFrame(animate);
+        return;
+    }
+
     for(let i=0;i<traffic.length;i++){
         traffic[i].update(road.borders,[]);
     }
@@ -253,9 +328,16 @@ function animate(time){
     const dist=Math.max(0,100-bestCar.y);
     genStats.trackDistance(dist);
 
+    if(!generationEnded){
+        currentRunFrames.push({x:bestCar.x,y:bestCar.y,angle:bestCar.angle});
+    }
+
     if(!generationEnded && cars.every(c=>c.damaged)){
         generationEnded=true;
         genStats.recordGeneration();
+        lastRunFrames=currentRunFrames;
+        const replayBtn=document.getElementById("replayBtn");
+        if(replayBtn) replayBtn.disabled=false;
     }
 
     carCanvas.height=window.innerHeight;
