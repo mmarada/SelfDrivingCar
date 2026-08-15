@@ -137,6 +137,7 @@ function restartSim(){
     genStats.sessionBest=0;
     currentRunFrames=[];
     replaying=false;
+    replayPaused=false;
     replayIndex=0;
 }
 
@@ -162,6 +163,7 @@ let generationEnded=false;
 let currentRunFrames=[];
 let lastRunFrames=null;
 let replaying=false;
+let replayPaused=false;
 let replayIndex=0;
 
 function polygonAt(x,y,angle,width,height){
@@ -178,14 +180,55 @@ function polygonAt(x,y,angle,width,height){
 function startReplay(){
     if(!lastRunFrames || lastRunFrames.length===0) return;
     replaying=true;
+    replayPaused=false;
     replayIndex=0;
+
     const replayBtn=document.getElementById("replayBtn");
     if(replayBtn) replayBtn.disabled=true;
+
+    const pauseBtn=document.getElementById("replayPauseBtn");
+    if(pauseBtn){
+        pauseBtn.disabled=false;
+        pauseBtn.textContent="Pause";
+    }
+
+    const scrub=document.getElementById("replayScrub");
+    if(scrub){
+        scrub.max=lastRunFrames.length-1;
+        scrub.value=0;
+        scrub.disabled=false;
+    }
 }
 
-function drawReplayFrame(){
-    const frame=lastRunFrames[replayIndex];
+function toggleReplayPause(){
+    if(!replaying) return;
+    replayPaused=!replayPaused;
+    const pauseBtn=document.getElementById("replayPauseBtn");
+    if(pauseBtn) pauseBtn.textContent=replayPaused?"Play":"Pause";
+}
 
+function scrubReplay(value){
+    if(!lastRunFrames || lastRunFrames.length===0) return;
+    replaying=true;
+    replayPaused=true;
+    replayIndex=Math.min(parseInt(value),lastRunFrames.length-1);
+
+    const replayBtn=document.getElementById("replayBtn");
+    if(replayBtn) replayBtn.disabled=true;
+
+    const pauseBtn=document.getElementById("replayPauseBtn");
+    if(pauseBtn){
+        pauseBtn.disabled=false;
+        pauseBtn.textContent="Play";
+    }
+}
+
+function updateScrubBar(){
+    const scrub=document.getElementById("replayScrub");
+    if(scrub) scrub.value=replayIndex;
+}
+
+function renderReplayFrame(frame){
     carCanvas.height=window.innerHeight;
     networkCanvas.height=window.innerHeight;
 
@@ -211,17 +254,27 @@ function drawReplayFrame(){
     carCtx.fillRect(5,5,190,40);
     carCtx.font="bold 12px monospace";
     carCtx.fillStyle="#ffd600";
-    carCtx.fillText("Replay",12,22);
+    carCtx.fillText(replayPaused?"Replay (paused)":"Replay",12,22);
     carCtx.font="12px monospace";
     carCtx.fillStyle="#fff";
     carCtx.fillText("Frame "+(replayIndex+1)+" / "+lastRunFrames.length,12,40);
     carCtx.restore();
+}
+
+function drawReplayFrame(){
+    renderReplayFrame(lastRunFrames[replayIndex]);
+    updateScrubBar();
+
+    if(replayPaused) return;
 
     replayIndex++;
     if(replayIndex>=lastRunFrames.length){
         replaying=false;
+        replayPaused=false;
         const replayBtn=document.getElementById("replayBtn");
         if(replayBtn) replayBtn.disabled=false;
+        const pauseBtn=document.getElementById("replayPauseBtn");
+        if(pauseBtn) pauseBtn.disabled=true;
     }
 }
 
@@ -338,6 +391,12 @@ function animate(time){
         lastRunFrames=currentRunFrames;
         const replayBtn=document.getElementById("replayBtn");
         if(replayBtn) replayBtn.disabled=false;
+        const scrub=document.getElementById("replayScrub");
+        if(scrub){
+            scrub.max=lastRunFrames.length-1;
+            scrub.value=0;
+            scrub.disabled=false;
+        }
     }
 
     carCanvas.height=window.innerHeight;
