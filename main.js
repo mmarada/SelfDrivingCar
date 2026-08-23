@@ -278,6 +278,24 @@ function drawReplayFrame(){
     }
 }
 
+function stepReplay(delta){
+    if(!replaying || !replayPaused || !lastRunFrames) return;
+    replayIndex=Math.min(Math.max(replayIndex+delta,0),lastRunFrames.length-1);
+    renderReplayFrame(lastRunFrames[replayIndex]);
+    updateScrubBar();
+}
+
+document.addEventListener("keydown",(event)=>{
+    if(!replaying || !replayPaused) return;
+    if(event.key==="ArrowLeft"){
+        event.preventDefault();
+        stepReplay(-1);
+    }else if(event.key==="ArrowRight"){
+        event.preventDefault();
+        stepReplay(1);
+    }
+});
+
 animate();
 
 function save(){
