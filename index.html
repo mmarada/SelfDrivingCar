@@ -39,6 +39,9 @@
                 <button id="replayPauseBtn" onclick="toggleReplayPause()" disabled title="Pause or resume the replay">Pause</button>
                 <input type="range" id="replayScrub" min="0" max="0" step="1" value="0" disabled
                     title="Scrub through the recorded run" oninput="scrubReplay(this.value)"/>
+                <button onclick="downloadReplay()" title="Download the last recorded run as JSON">Export Replay</button>
+                <button onclick="document.getElementById('replayUpload').click()" title="Load a previously exported replay JSON file">Import Replay</button>
+                <input type="file" id="replayUpload" accept=".json" style="display:none" onchange="loadReplayFromFile(event)"/>
             </div>
         </div>
         <canvas id="networkCanvas"></canvas>

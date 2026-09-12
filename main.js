@@ -339,6 +339,52 @@ function loadBrainFromFile(event){
     event.target.value="";
 }
 
+function downloadReplay(){
+    if(!lastRunFrames || lastRunFrames.length===0) return;
+    const data=JSON.stringify(lastRunFrames);
+    const blob=new Blob([data],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download="replay-gen"+genStats.generation+".json";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function isValidReplayFrames(frames){
+    return Array.isArray(frames) && frames.length>0 && frames.every(
+        f=>f && typeof f.x==="number" && typeof f.y==="number" && typeof f.angle==="number"
+    );
+}
+
+function loadReplayFromFile(event){
+    const file=event.target.files[0];
+    if(!file) return;
+    const reader=new FileReader();
+    reader.onload=function(e){
+        try{
+            const frames=JSON.parse(e.target.result);
+            if(!isValidReplayFrames(frames)){
+                throw new Error("expected a non-empty array of {x,y,angle} frames");
+            }
+            lastRunFrames=frames;
+
+            const replayBtn=document.getElementById("replayBtn");
+            if(replayBtn) replayBtn.disabled=false;
+            const scrub=document.getElementById("replayScrub");
+            if(scrub){
+                scrub.max=lastRunFrames.length-1;
+                scrub.value=0;
+                scrub.disabled=false;
+            }
+        }catch(err){
+            alert("Invalid replay file: "+err.message);
+        }
+    };
+    reader.readAsText(file);
+    event.target.value="";
+}
+
 function generateCars(N){
     const cars=[];
     for(let i=0;i<N;i++){
