@@ -81,6 +81,23 @@ function deleteCustomPreset(name){
     renderCustomPresets();
 }
 
+function renameCustomPreset(oldName){
+    const presets=getCustomPresets();
+    const preset=presets[oldName];
+    if(!preset) return;
+
+    const newName=prompt("Rename preset:",oldName);
+    if(!newName) return;
+    const trimmed=newName.trim();
+    if(!trimmed || trimmed===oldName) return;
+    if(presets[trimmed] && !confirm('"'+trimmed+'" already exists. Overwrite it?')) return;
+
+    presets[trimmed]=preset;
+    delete presets[oldName];
+    setCustomPresets(presets);
+    renderCustomPresets();
+}
+
 function renderCustomPresets(){
     const list=document.getElementById("customPresetList");
     if(!list) return;
@@ -97,6 +114,15 @@ function renderCustomPresets(){
         applyBtn.title="N="+preset.population+", mutation="+preset.mutation.toFixed(2);
         applyBtn.onclick=()=>applyCustomPreset(name);
 
+        const renameBtn=document.createElement("button");
+        renameBtn.textContent="✎";
+        renameBtn.className="renamePresetBtn";
+        renameBtn.title="Rename preset";
+        renameBtn.onclick=(e)=>{
+            e.stopPropagation();
+            renameCustomPreset(name);
+        };
+
         const deleteBtn=document.createElement("button");
         deleteBtn.textContent="×";
         deleteBtn.className="deletePresetBtn";
@@ -107,6 +133,7 @@ function renderCustomPresets(){
         };
 
         row.appendChild(applyBtn);
+        row.appendChild(renameBtn);
         row.appendChild(deleteBtn);
         list.appendChild(row);
     }

@@ -134,6 +134,12 @@ button:hover{
     white-space: nowrap;
 }
 
+.renamePresetBtn{
+    width: 18px !important;
+    padding: 5px 0 7px 0 !important;
+    margin-left: 2px !important;
+}
+
 .deletePresetBtn{
     width: 18px !important;
     padding: 5px 0 7px 0 !important;
