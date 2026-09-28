@@ -35,7 +35,14 @@
             </div>
             <button onclick="restartSim()" title="Respawn cars with current mutation rate">Restart</button>
             <div id="replayControl">
-                <button id="replayBtn" onclick="startReplay()" disabled title="Replay the best car's run from the last completed generation">Replay</button>
+                <div id="packControl">
+                    <label for="replayPackSize">Ghosts</label>
+                    <input type="range" id="replayPackSize" min="0" max="20" step="1" value="10"
+                        title="How many trailing cars to record alongside the leader for replay"
+                        oninput="document.getElementById('packValue').textContent=this.value"/>
+                    <span id="packValue">10</span>
+                </div>
+                <button id="replayBtn" onclick="startReplay()" disabled title="Replay the leader and the recorded pack from the last completed generation">Replay</button>
                 <button id="replayPauseBtn" onclick="toggleReplayPause()" disabled title="Pause or resume the replay">Pause</button>
                 <input type="range" id="replayScrub" min="0" max="0" step="1" value="0" disabled
                     title="Scrub through the recorded run" oninput="scrubReplay(this.value)"/>

@@ -20,6 +20,11 @@ function getPopulationSize(){
     return el ? parseInt(el.value) : 100;
 }
 
+function getReplayPackSize(){
+    const el=document.getElementById("replayPackSize");
+    return el ? parseInt(el.value) : 10;
+}
+
 function onPopulationChange(){
     restartSim();
 }
@@ -204,6 +209,32 @@ function polygonAt(x,y,angle,width,height){
     return points;
 }
 
+// Top `size` cars by distance at this tick, excluding the leader (already stored
+// as the frame's own x/y/angle). Tuples instead of keyed objects roughly halve
+// the exported file size, which matters since the pack is recorded every tick.
+function capturePack(carList,leader,size){
+    if(size<=0) return [];
+    return carList
+        .filter(c=>c!==leader)
+        .sort((a,b)=>a.y-b.y)
+        .slice(0,size)
+        .map(c=>[
+            Math.round(c.x*10)/10,
+            Math.round(c.y*10)/10,
+            Math.round(c.angle*1000)/1000,
+            c.damaged?1:0
+        ]);
+}
+
+function drawPolygon(ctx,poly){
+    ctx.beginPath();
+    ctx.moveTo(poly[0].x,poly[0].y);
+    for(let i=1;i<poly.length;i++){
+        ctx.lineTo(poly[i].x,poly[i].y);
+    }
+    ctx.fill();
+}
+
 function startReplay(){
     if(!lastRunFrames || lastRunFrames.length===0) return;
     replaying=true;
@@ -266,25 +297,33 @@ function renderReplayFrame(frame){
         traffic[i].draw(carCtx,"red");
     }
 
-    const poly=polygonAt(frame.x,frame.y,frame.angle,30,50);
-    carCtx.fillStyle="#ffd600";
-    carCtx.beginPath();
-    carCtx.moveTo(poly[0].x,poly[0].y);
-    for(let i=1;i<poly.length;i++){
-        carCtx.lineTo(poly[i].x,poly[i].y);
+    const pack=frame.pack || [];
+    let packCrashed=0;
+    carCtx.globalAlpha=0.35;
+    for(const [x,y,angle,damaged] of pack){
+        if(damaged) packCrashed++;
+        carCtx.fillStyle=damaged?"gray":"blue";
+        drawPolygon(carCtx,polygonAt(x,y,angle,30,50));
     }
-    carCtx.fill();
+    carCtx.globalAlpha=1;
+
+    carCtx.fillStyle="#ffd600";
+    drawPolygon(carCtx,polygonAt(frame.x,frame.y,frame.angle,30,50));
     carCtx.restore();
 
     carCtx.save();
     carCtx.fillStyle="rgba(0,0,0,0.55)";
-    carCtx.fillRect(5,5,190,40);
+    carCtx.fillRect(5,5,190,pack.length?58:40);
     carCtx.font="bold 12px monospace";
     carCtx.fillStyle="#ffd600";
     carCtx.fillText(replayPaused?"Replay (paused)":"Replay",12,22);
     carCtx.font="12px monospace";
     carCtx.fillStyle="#fff";
     carCtx.fillText("Frame "+(replayIndex+1)+" / "+lastRunFrames.length,12,40);
+    if(pack.length){
+        carCtx.fillStyle="#aaa";
+        carCtx.fillText("Pack:  "+pack.length+" ("+packCrashed+" crashed)",12,56);
+    }
     carCtx.restore();
 }
 
@@ -378,9 +417,15 @@ function downloadReplay(){
     URL.revokeObjectURL(url);
 }
 
+function isValidPackEntry(entry){
+    return Array.isArray(entry) && entry.length===4 && entry.every(v=>typeof v==="number");
+}
+
+// `pack` is optional so replays exported before multi-car recording still load.
 function isValidReplayFrames(frames){
     return Array.isArray(frames) && frames.length>0 && frames.every(
-        f=>f && typeof f.x==="number" && typeof f.y==="number" && typeof f.angle==="number"
+        f=>f && typeof f.x==="number" && typeof f.y==="number" && typeof f.angle==="number" &&
+            (f.pack===undefined || (Array.isArray(f.pack) && f.pack.every(isValidPackEntry)))
     );
 }
 
@@ -392,7 +437,7 @@ function loadReplayFromFile(event){
         try{
             const frames=JSON.parse(e.target.result);
             if(!isValidReplayFrames(frames)){
-                throw new Error("expected a non-empty array of {x,y,angle} frames");
+                throw new Error("expected a non-empty array of {x,y,angle,pack?} frames");
             }
             lastRunFrames=frames;
 
@@ -473,7 +518,10 @@ function animate(time){
     genStats.trackDistance(dist);
 
     if(!generationEnded){
-        currentRunFrames.push({x:bestCar.x,y:bestCar.y,angle:bestCar.angle});
+        currentRunFrames.push({
+            x:bestCar.x,y:bestCar.y,angle:bestCar.angle,
+            pack:capturePack(cars,bestCar,getReplayPackSize())
+        });
     }
 
     if(!generationEnded && cars.every(c=>c.damaged)){

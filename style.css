@@ -61,7 +61,8 @@ button:hover{
     color: #003399;
 }
 
-#populationControl{
+#populationControl,
+#packControl{
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -74,14 +75,22 @@ button:hover{
     color: #222;
 }
 
-#populationControl label{
+#populationControl label,
+#packControl label{
     font-weight: bold;
     margin-bottom: 2px;
 }
 
-#populationControl input[type="range"]{
+#populationControl input[type="range"],
+#packControl input[type="range"]{
     width: 80px;
     cursor: pointer;
+}
+
+#packValue{
+    margin-top: 2px;
+    font-weight: bold;
+    color: #665500;
 }
 
 #popValue{
