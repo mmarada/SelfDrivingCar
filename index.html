@@ -43,7 +43,7 @@
                     <span id="packValue">10</span>
                 </div>
                 <button id="replayBtn" onclick="startReplay()" disabled title="Replay the leader and the recorded pack from the last completed generation">Replay</button>
-                <button id="replayPauseBtn" onclick="toggleReplayPause()" disabled title="Pause or resume the replay">Pause</button>
+                <button id="replayPauseBtn" onclick="toggleReplayPause()" disabled title="Pause or resume the replay. While paused, click any car to see its rank and distance">Pause</button>
                 <input type="range" id="replayScrub" min="0" max="0" step="1" value="0" disabled
                     title="Scrub through the recorded run" oninput="scrubReplay(this.value)"/>
                 <button onclick="downloadReplay()" title="Download the last recorded run as JSON">Export Replay</button>

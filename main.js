@@ -171,6 +171,7 @@ function restartSim(){
     replaying=false;
     replayPaused=false;
     replayIndex=0;
+    selectedGhost=null;
 }
 
 const traffic=[
@@ -197,6 +198,10 @@ let lastRunFrames=null;
 let replaying=false;
 let replayPaused=false;
 let replayIndex=0;
+// Selected car in the replay, by rank at the current tick: -1 = leader,
+// i >= 0 = frame.pack[i]. Rank, not identity, because the pack is re-sorted
+// every tick, so stepping frames keeps following "the 3rd-place car".
+let selectedGhost=null;
 
 function polygonAt(x,y,angle,width,height){
     const points=[];
@@ -240,6 +245,7 @@ function startReplay(){
     replaying=true;
     replayPaused=false;
     replayIndex=0;
+    selectedGhost=null;
 
     const replayBtn=document.getElementById("replayBtn");
     if(replayBtn) replayBtn.disabled=true;
@@ -309,11 +315,24 @@ function renderReplayFrame(frame){
 
     carCtx.fillStyle="#ffd600";
     drawPolygon(carCtx,polygonAt(frame.x,frame.y,frame.angle,30,50));
+
+    const info=ghostInfo(frame,selectedGhost);
+    if(info){
+        carCtx.strokeStyle="#ff4081";
+        carCtx.lineWidth=3;
+        const poly=polygonAt(info.x,info.y,info.angle,30,50);
+        carCtx.beginPath();
+        carCtx.moveTo(poly[0].x,poly[0].y);
+        for(let i=1;i<poly.length;i++) carCtx.lineTo(poly[i].x,poly[i].y);
+        carCtx.closePath();
+        carCtx.stroke();
+    }
     carCtx.restore();
 
+    const hudHeight=(pack.length?58:40)+(info?36:0);
     carCtx.save();
     carCtx.fillStyle="rgba(0,0,0,0.55)";
-    carCtx.fillRect(5,5,190,pack.length?58:40);
+    carCtx.fillRect(5,5,190,hudHeight);
     carCtx.font="bold 12px monospace";
     carCtx.fillStyle="#ffd600";
     carCtx.fillText(replayPaused?"Replay (paused)":"Replay",12,22);
@@ -324,8 +343,91 @@ function renderReplayFrame(frame){
         carCtx.fillStyle="#aaa";
         carCtx.fillText("Pack:  "+pack.length+" ("+packCrashed+" crashed)",12,56);
     }
+    if(info){
+        const top=pack.length?74:56;
+        carCtx.fillStyle="#ff4081";
+        carCtx.fillText("#"+info.rank+(info.rank===1?" leader":"")+(info.damaged?" (crashed)":""),12,top);
+        carCtx.fillStyle="#fff";
+        carCtx.fillText("Dist "+info.dist+"px"+(info.rank===1?"":"  gap -"+info.gap),12,top+16);
+    }
     carCtx.restore();
 }
+
+// Rank/distance readout for the selected car at this frame, or null if the
+// selection doesn't exist here (e.g. a shorter pack in an imported replay).
+function ghostInfo(frame,selection){
+    if(selection===null || !frame) return null;
+    let x,y,angle,damaged;
+    if(selection===-1){
+        ({x,y,angle}=frame);
+        damaged=0;
+    }else{
+        const entry=(frame.pack || [])[selection];
+        if(!entry) return null;
+        [x,y,angle,damaged]=entry;
+    }
+    return {
+        rank:selection+2,
+        x,y,angle,
+        damaged:!!damaged,
+        dist:Math.max(0,Math.round(100-y)),
+        gap:Math.round(y-frame.y)
+    };
+}
+
+function pointInPolygon(pt,poly){
+    let inside=false;
+    for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+        const a=poly[i],b=poly[j];
+        if((a.y>pt.y)!==(b.y>pt.y) &&
+            pt.x<(b.x-a.x)*(pt.y-a.y)/(b.y-a.y)+a.x){
+            inside=!inside;
+        }
+    }
+    return inside;
+}
+
+// Mirrors the translate() in renderReplayFrame, plus CSS-size scaling in case
+// the canvas is displayed at a different size than its backing store.
+function replayClickToWorld(clientX,clientY,frame){
+    const rect=carCanvas.getBoundingClientRect();
+    const cx=(clientX-rect.left)*(carCanvas.width/(rect.width || carCanvas.width));
+    const cy=(clientY-rect.top)*(carCanvas.height/(rect.height || carCanvas.height));
+    return {x:cx,y:cy+frame.y-carCanvas.height*0.7};
+}
+
+// Hit-test in reverse draw order so the car painted on top wins: the leader
+// first, then the pack from last-drawn to first-drawn.
+function hitTestReplayFrame(frame,pt){
+    if(pointInPolygon(pt,polygonAt(frame.x,frame.y,frame.angle,30,50))) return -1;
+    const pack=frame.pack || [];
+    for(let i=pack.length-1;i>=0;i--){
+        const [x,y,angle]=pack[i];
+        if(pointInPolygon(pt,polygonAt(x,y,angle,30,50))) return i;
+    }
+    return null;
+}
+
+function onReplayCanvasClick(event){
+    if(!replaying || !replayPaused || !lastRunFrames) return;
+    const frame=lastRunFrames[replayIndex];
+    const hit=hitTestReplayFrame(frame,replayClickToWorld(event.clientX,event.clientY,frame));
+    selectedGhost=(hit===selectedGhost)?null:hit;
+    renderReplayFrame(frame);
+}
+
+function onReplayCanvasHover(event){
+    if(!replaying || !replayPaused || !lastRunFrames){
+        carCanvas.style.cursor="";
+        return;
+    }
+    const frame=lastRunFrames[replayIndex];
+    const hit=hitTestReplayFrame(frame,replayClickToWorld(event.clientX,event.clientY,frame));
+    carCanvas.style.cursor=hit===null?"":"pointer";
+}
+
+carCanvas.addEventListener("click",onReplayCanvasClick);
+carCanvas.addEventListener("mousemove",onReplayCanvasHover);
 
 function drawReplayFrame(){
     renderReplayFrame(lastRunFrames[replayIndex]);
@@ -440,6 +542,7 @@ function loadReplayFromFile(event){
                 throw new Error("expected a non-empty array of {x,y,angle,pack?} frames");
             }
             lastRunFrames=frames;
+            selectedGhost=null;
 
             const replayBtn=document.getElementById("replayBtn");
             if(replayBtn) replayBtn.disabled=false;
