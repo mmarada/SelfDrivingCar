@@ -73,9 +73,63 @@ function saveCustomPreset(){
     renderCustomPresets();
 }
 
+// A checkpoint is a custom preset that also carries the leader's brain, so
+// applying it restarts from that exact network instead of whatever happens
+// to be in bestBrain right now. Stored in the same map as plain presets so
+// rename/delete need no changes; `brain` is simply an optional field.
+function saveCheckpointPreset(){
+    const name=prompt("Name this checkpoint (sliders + current leader's brain):");
+    if(!name) return;
+    const trimmed=name.trim();
+    if(!trimmed) return;
+
+    const presets=getCustomPresets();
+    if(presets[trimmed] && !confirm('"'+trimmed+'" already exists. Overwrite it?')) return;
+    presets[trimmed]={
+        population:getPopulationSize(),
+        mutation:getMutationRate(),
+        brain:JSON.parse(JSON.stringify(bestCar.brain)),
+        generation:genStats.generation+(generationEnded?0:1),
+        distance:Math.max(0,Math.round(100-bestCar.y)),
+    };
+    setCustomPresets(presets);
+    renderCustomPresets();
+}
+
+function isFiniteNumberArray(arr,length){
+    return Array.isArray(arr) && arr.length===length &&
+        arr.every(v=>typeof v==="number" && Number.isFinite(v));
+}
+
+// Same layer sizes as `reference`, every weight and bias a finite number.
+// A brain of another shape would feed undefined into Level.feedForward and
+// silently produce cars that never steer, so reject it up front.
+function isCompatibleBrain(brain,reference){
+    if(!brain || !Array.isArray(brain.levels)) return false;
+    if(brain.levels.length!==reference.levels.length) return false;
+    return brain.levels.every((level,i)=>{
+        const ins=reference.levels[i].inputs.length;
+        const outs=reference.levels[i].outputs.length;
+        return level &&
+            Array.isArray(level.inputs) && level.inputs.length===ins &&
+            Array.isArray(level.outputs) && level.outputs.length===outs &&
+            isFiniteNumberArray(level.biases,outs) &&
+            Array.isArray(level.weights) && level.weights.length===ins &&
+            level.weights.every(row=>isFiniteNumberArray(row,outs));
+    });
+}
+
 function applyCustomPreset(name){
     const preset=getCustomPresets()[name];
     if(!preset) return;
+    if(preset.brain){
+        if(!isCompatibleBrain(preset.brain,cars[0].brain)){
+            alert('Checkpoint "'+name+'" has a brain that doesn\'t fit this network. Sliders not changed.');
+            return;
+        }
+        // restartSim() -> applyBrain() reads bestBrain, so write it first.
+        localStorage.setItem("bestBrain",JSON.stringify(preset.brain));
+    }
     applyPresetValues(preset);
 }
 
@@ -117,6 +171,12 @@ function renderCustomPresets(){
         const applyBtn=document.createElement("button");
         applyBtn.textContent=name;
         applyBtn.title="N="+preset.population+", mutation="+preset.mutation.toFixed(2);
+        if(preset.brain){
+            applyBtn.textContent="◆ "+name;
+            applyBtn.classList.add("checkpointPresetBtn");
+            applyBtn.title+="\nBrain from gen "+preset.generation+" ("+preset.distance+"px)"+
+                "\nApplying replaces your saved brain";
+        }
         applyBtn.onclick=()=>applyCustomPreset(name);
 
         const renameBtn=document.createElement("button");

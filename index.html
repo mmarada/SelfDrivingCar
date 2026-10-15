@@ -32,6 +32,7 @@
                 <button onclick="applyPreset('exploit')" title="N=40, mutation=0.05 — refine current brain">Exploit</button>
                 <div id="customPresetList"></div>
                 <button onclick="saveCustomPreset()" title="Save the current population + mutation sliders as a named preset">+ Save Custom</button>
+                <button onclick="saveCheckpointPreset()" title="Save the sliders plus the current leader's brain, so you can branch from this exact state later">+ Checkpoint</button>
             </div>
             <button onclick="restartSim()" title="Respawn cars with current mutation rate">Restart</button>
             <div id="replayControl">
